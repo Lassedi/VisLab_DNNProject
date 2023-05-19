@@ -5,12 +5,12 @@ class FreeConvNetwork(nn.Module):
     def __init__(self):
         super().__init__() # call upon parent class constructor ie their attributes and methods 
         self.freeConvStack = nn.Sequential( #define the order in which data passes through net
-            LocallyConnected2d(3, out_channels=32, output_size=44, kernel_size=6, stride=4, bias=True),
+            LocallyConnected2d(3, out_channels=32, output_size=(54,44), kernel_size=6, stride=4, bias=True),
             # output_size = ((input size(width/height of img) - kernel_size + 2xpadding) / stride) + 1(for bias)
             # weights = (kernel_size*kernel_size*out_channels+1(for bias))*output_size*output_size
             nn.ReLU(),
             
-            LocallyConnected2d(32, 64, 10, 6, 4,True), # here input size = output size previous layer not out_channels
+            LocallyConnected2d(32, 64, (13,10), 6, 4,True), # here input size = output size previous layer not out_channels
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
             
