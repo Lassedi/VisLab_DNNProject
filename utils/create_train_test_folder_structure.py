@@ -2,6 +2,7 @@ import shutil
 import os
 import pandas as pd
 import numpy as np
+
 def create_train_test_folder_structure(n_classes, path):
     
     # read in the list of celebreties left in the folder
@@ -18,11 +19,11 @@ def create_train_test_folder_structure(n_classes, path):
 
         
         for n_img in range(len(identity_x)):
-            id_x_file = identity_x.iloc[n_img,0]
+            id_x_file = identity_x.iloc[n_img,0][0:-4]
 
-            path_original = "{}/Data/img_align_celeba/img_align_celeba/{}".format(path,id_x_file)
+            path_original = "{}\Data\img_align_celeba\img_align_celeba_png\{}.png".format(path,id_x_file)
             path_target = "{}/Data/img_align_celeba/class_data/{}/".format(path, x)
-            
+
             # make sure target directory exists
             if not os.path.exists(path_target):
                 os.makedirs(path_target)
