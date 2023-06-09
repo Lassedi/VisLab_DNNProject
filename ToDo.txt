@@ -4,3 +4,8 @@ understand validation loss, loss.backward()
 training and validation loop in general 
 check why running average displays 0 - check what accuracy looks like maybe the training works fine
  
+
+ 9.06.23
+ try out learning rate scheduler 
+ try out minst for freeconvnet
+ make 
