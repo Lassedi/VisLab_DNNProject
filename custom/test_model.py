@@ -12,10 +12,16 @@ class FreeConvNetwork(nn.Module):
             
             LocallyConnected2d(1, 1, (51,41), 6, 2,True), # here input size = output size previous layer not out_channels
             nn.ReLU(),
+            
+            
+            LocallyConnected2d(1, 1, (23,18), 6, 2,True), # here input size = output size previous layer not out_channels
+            nn.ReLU(),
+            
             nn.MaxPool2d(kernel_size=2),
             
+            
             nn.Flatten(),
-            nn.Linear(1*25*20, 300), # input size = output_channels*output_size/2 of last Local layer because of maxpool2d kernel size 2
+            nn.Linear(1*11*9, 300), # input size = output_channels*output_size/2 of last Local layer because of maxpool2d kernel size 2
             nn.ReLU(),
             nn.Linear(300, 200)
         )

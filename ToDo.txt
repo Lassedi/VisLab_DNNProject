@@ -6,6 +6,6 @@ check why running average displays 0 - check what accuracy looks like maybe the 
  
 
  9.06.23
- try out learning rate scheduler 
+ try out learning rate scheduler - play with learning rate
  try out minst for freeconvnet
  make 
