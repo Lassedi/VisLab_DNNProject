@@ -5,7 +5,7 @@ import torch
 class LocallyConnected2d(nn.Module):
     def __init__(self, in_channels, out_channels, output_size, kernel_size, stride, bias=False):
         super(LocallyConnected2d, self).__init__()
-        #output_size = _pair(output_size) we dont have a square img
+        output_size = _pair(output_size) #we dont have a square img
         assert isinstance(output_size, tuple), "Input must be tuple"
         
         self.weight = nn.Parameter(
@@ -26,6 +26,7 @@ class LocallyConnected2d(nn.Module):
         dh, dw = self.stride
         x = x.unfold(2, kh, dh).unfold(3, kw, dw)
         x = x.contiguous().view(*x.size()[:-2], -1)
+        
         # Sum in in_channel and kernel_size dims
         out = (x.unsqueeze(1) * self.weight).sum([2, -1])
         if self.bias is not None:
