@@ -5,13 +5,13 @@ class FreeConvNetwork(nn.Module):
     def __init__(self):
         super().__init__() # call upon parent class constructor ie their attributes and methods 
         #self.freeConvStack = nn.Sequential( #define the order in which data passes through net
-        self.LL1 = LocallyConnected2d(1, out_channels=32, output_size=(13,13), kernel_size=3, stride=2, bias=True)
+        self.LL1 = LocallyConnected2d(1, out_channels=32, output_size=13, kernel_size=3, stride=2, bias=True)
         # output_size = ((input size(width/height of img) - kernel_size + 2xpadding) / stride) + 1(for bias)
         # weights = (kernel_size*kernel_size*in_channels+1(for bias))*out_channels*output_size*output_size
         self.activation = nn.ReLU()
         
-        self.LL2 = LocallyConnected2d(32, 64, (6,6), 3, 2,True) # here input size = output size previous layer not out_channels
-        self.LL3 = LocallyConnected2d(64, 128, (4,4), 3, 1,True) # here input size = output size previous layer not out_channels
+        self.LL2 = LocallyConnected2d(32, 64, 6, 3, 2,True) # here input size = output size previous layer not out_channels
+        self.LL3 = LocallyConnected2d(64, 128, 4, 3, 1,True) # here input size = output size previous layer not out_channels
 
         # self.LL4 = LocallyConnected2d(3, 3, (46,36), 3, 1,True) # here input size = output size previous layer not out_channels
         # self.LL5 = LocallyConnected2d(3, 3, (44,34), 3, 1,True) # here input size = output size previous layer not out_channels
