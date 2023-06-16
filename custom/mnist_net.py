@@ -16,7 +16,7 @@ class FreeConvNetwork(nn.Module):
         self.linear1 = nn.Linear(64*4*4, 512) # input size = output_channels*output_size/2 of last Local layer because of maxpool2d kernel size 2
         self.linear2 = nn.Linear(512, 10)
         self.activation = nn.ReLU()
-        self.softm = nn.Softmax()
+        self.softm = nn.Softmax(dim=-1)
 
 
 
