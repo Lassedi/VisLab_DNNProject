@@ -17,9 +17,9 @@ class FreeConvNetwork(nn.Module):
             nn.ReLU(),
             
             nn.Flatten(),
-            nn.Linear(32*12*10, 1920), # input size = output_channels*(output_size/2) of last Local layer because of maxpool2d kernel size 2
+            nn.Linear(32*12*10, 3740), # input size = output_channels*(output_size/2) of last Local layer because of maxpool2d kernel size 2
             nn.ReLU(),
-            nn.Linear(1920, 198),
+            nn.Linear(3740, 3740),
         )
 
     def forward(self, x):

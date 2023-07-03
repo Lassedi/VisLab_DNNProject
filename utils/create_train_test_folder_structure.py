@@ -1,7 +1,6 @@
 import shutil
 import os
 import pandas as pd
-import numpy as np
 
 def create_train_test_folder_structure(n_classes, path):
     
