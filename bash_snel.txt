@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#SBATCH -p gpu
+#SBATCH -t 01:00
+#SVARCH -n 36
+#SBATCH --gpus=2
+#SBATCH --mem=240G
+
+#loading the modules
+module load 2022
+module load Anaconda
+
+#coping the data
+cp -r $HOME/Research Internship/DNN_project/Data/MNIST/raw "$TMPDIR"
+cp -r $HOME/Users/Lasse/anaconda3/envs/DNN_project "$TMPDIR"
+cp $HOME/Research Internship/DNN_project/main_snellius.py
+
+#running the script
+conda activate DNN_project
+python main_snellius.py
+
+#coping the results to local machine
+cp -r "$TMPDIR"/model $HOME/Research Internship/DNN_project/Snellius_model
+cp -r "$TMPDIR"/runs $HOME/Research Internship/DNN_project/Snellius_runs
