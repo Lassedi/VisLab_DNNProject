@@ -5,8 +5,16 @@ import torch
 import torch.nn as nn
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
+import argparse
 # import torch.optim.lr_scheduler as lr_scheduler
+
+#dealing with input
+parser = argparse.ArgumentParser(description="DNN_project")
+parser.add_argument("--inp_dir", "--input_string", required=True)
+
+args = vars(parser.parse_args())
+input_dir = args["inp_dir"]
+data_dir = input_dir + "/Data"
 
 #######
 # Model
@@ -34,8 +42,8 @@ summary(model, (3, 28, 28))
 transform = transforms.Compose([
     transforms.ToTensor()
 ])
-train_dataset = datasets.MNIST("./data", train = True, download=False, transform=transform)
-test_dataset = datasets.MNIST("./data", train=False, download=False, transform=transform)
+train_dataset = datasets.MNIST(data_dir, train = True, download=False, transform=transform)
+test_dataset = datasets.MNIST(data_dir, train=False, download=False, transform=transform)
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=72, shuffle=True)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=72)
@@ -80,7 +88,7 @@ def train_one_epoch(epoch_index, tb_writer):
     # Here, we use enumerate(training_loader) instead of
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
-    for i, data in enumerate(tqdm(train_loader)):
+    for i, data in enumerate(train_loader):
         # Every data instance is an input + label pair
         inputs, labels = data
         
@@ -108,9 +116,8 @@ def train_one_epoch(epoch_index, tb_writer):
         
         # Gather data and report
         running_loss += loss.item()
-        
-        if i % 1000 == 999:
-            last_loss = running_loss / 1000 # loss per batch
+        if i % 100 == 99:
+            last_loss = running_loss / 100 # loss per batch
             print('  batch {} loss: {}'.format(i + 1, last_loss))
             tb_x = epoch_index * len(train_loader) + i + 1
             tb_writer.add_scalar('Loss/train', last_loss, tb_x)
@@ -120,16 +127,16 @@ def train_one_epoch(epoch_index, tb_writer):
 
 # Initializing in a separate cell so we can easily add more epochs to the same run
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
+writer = SummaryWriter((input_dir + '/runs/fashion_trainer_{}'.format(timestamp)))
 epoch_number = 0
 
 # print(list(model.children()))
-EPOCHS = 5
+EPOCHS = 1
 
 best_vloss = 1_000_000.
 
-if not os.path.isdir("./model"):
-    os.makedirs("./model")
+if not os.path.isdir((input_dir + "/model")):
+    os.makedirs((input_dir + "/model"))
 
 for epoch in range(EPOCHS):
     print('EPOCH {}:'.format(epoch_number + 1))
@@ -167,7 +174,9 @@ for epoch in range(EPOCHS):
     # Track best performance, and save the model's state
     if avg_vloss < best_vloss:
         best_vloss = avg_vloss
-        model_path = 'model/model_{}_{}'.format(timestamp, epoch_number)
+        model_path = (input_dir + '/model/model_{}_{}'.format(timestamp, epoch_number))
         torch.save(model.state_dict(), model_path)
 
     epoch_number += 1
+
+    print(os.listdir(input_dir))

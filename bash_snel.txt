@@ -2,23 +2,37 @@
 
 #SBATCH -p gpu
 #SBATCH -t 01:00
-#SVARCH -n 36
-#SBATCH --gpus=2
-#SBATCH --mem=240G
+#SBATCH -N 1
+#SBATCH -ntasks=1
+#SBATCH --tasks-per-node=18
+#SBATCH --cpus-per-task=1
+#SBATCH --gpus=1
+#SBATCH --mem=120G
+
+#SBATCH --mail-type=BEGIN,END
+#SBATCH --mail-user=lasse-d-z@web.de
+
+echo "1"
+. ~/.bashrc # This line is super important, otherwise the conda activate doesn't work
 
 #loading the modules
 module load 2022
-module load Anaconda
+module load Anaconda3/2022.05
+conda activate DNN_project
+echo "2"
 
 #coping the data
-cp -r $HOME/Research Internship/DNN_project/Data/MNIST/raw "$TMPDIR"
-cp -r $HOME/Users/Lasse/anaconda3/envs/DNN_project "$TMPDIR"
-cp $HOME/Research Internship/DNN_project/main_snellius.py
+cp -r $HOME/Data/MNIST/raw "$TMPDIR"
+cp -r $HOME/DNN_project "$TMPDIR"
+cp $HOME/main_snellius.py "$TMPDIR"
+echo "3"
 
 #running the script
-conda activate DNN_project
 python main_snellius.py
+echo "4"
 
 #coping the results to local machine
-cp -r "$TMPDIR"/model $HOME/Research Internship/DNN_project/Snellius_model
-cp -r "$TMPDIR"/runs $HOME/Research Internship/DNN_project/Snellius_runs
+cp -r "$TMPDIR"/model $HOME/Snellius_model
+cp -r "$TMPDIR"/runs $HOME/Snellius_runs
+
+echo "5"
