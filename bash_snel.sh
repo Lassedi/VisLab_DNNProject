@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH -p gpu
-#SBATCH -t 05:00
+#SBATCH -t 10:00
 #SBATCH -N 1
 #SBATCH --ntasks=1
-#SBATCH --tasks-per-node=18
+#SBATCH --tasks-per-node=36
 #SBATCH --cpus-per-task=1
-#SBATCH --gpus=1
-#SBATCH --mem=120G
+#SBATCH --gpus=2
+#SBATCH --mem=240G
 
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=lasse-d-z@web.de

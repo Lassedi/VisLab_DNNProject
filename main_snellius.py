@@ -1,11 +1,13 @@
 import os
 from torchsummary import summary
+import torchvision
 from torchvision import datasets,transforms
 import torch
 import torch.nn as nn
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 import argparse
+import matplotlib.pyplot as plt
 # import torch.optim.lr_scheduler as lr_scheduler
 
 #dealing with input
@@ -26,13 +28,15 @@ from custom.mnist_net import FreeConvNetwork
 
 # Testing & summarizeing the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
+print(device, torch.cuda.device_count())
 
 
 model = FreeConvNetwork()
 model = nn.DataParallel(model)
 
+model.to(device)
 summary(model, (3, 28, 28))
+
 
 ######
 # Data
@@ -84,6 +88,8 @@ def train_one_epoch(epoch_index, tb_writer):
 
     running_loss = 0.
     last_loss = 0.
+    correct = 0.
+    total = 0.
 
     # Here, we use enumerate(training_loader) instead of
     # iter(training_loader) so that we can track the batch
@@ -116,34 +122,60 @@ def train_one_epoch(epoch_index, tb_writer):
         
         # Gather data and report
         running_loss += loss.item()
+
+        # calculating accuracy
+        _, predicted = torch.max(outputs.data,1)
+        correct += (predicted == labels).sum()
+        total += labels.size(0)
+
         if i % 100 == 99:
-            last_loss = running_loss / 100 # loss per batch
-            print('  batch {} loss: {}'.format(i + 1, last_loss))
+            last_loss = running_loss / 100 # avg loss over x batches
+            # print('  batch {} loss: {}'.format(i + 1, last_loss))
             tb_x = epoch_index * len(train_loader) + i + 1
             tb_writer.add_scalar('Loss/train', last_loss, tb_x)
             running_loss = 0.
 
-    return last_loss
+
+    accuracy = correct/total * 100
+
+    return last_loss, accuracy
 
 # Initializing in a separate cell so we can easily add more epochs to the same run
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 writer = SummaryWriter((input_dir + '/runs/fashion_trainer_{}'.format(timestamp)))
 epoch_number = 0
 
-# print(list(model.children()))
-EPOCHS = 1
+#visualize training data & corresponding labels & add them to summary
+dataiter = iter(train_loader)
+images, labels = next(dataiter)
 
+# print("Labels: ",labels.numpy()[0:4])
+
+images = images[:4,:,:,:]
+img_grid = torchvision.utils.make_grid(images)
+
+# plt.imshow(img_grid.permute(1,2,0))
+# plt.show()
+
+writer.add_image("train_data_firstFour; Labels: {}".format(
+    labels.numpy()[0:4]), img_grid)
+
+
+EPOCHS = 10
 best_vloss = 1_000_000.
+
 
 if not os.path.isdir((input_dir + "/model")):
     os.makedirs((input_dir + "/model"))
 
 for epoch in range(EPOCHS):
-    print('EPOCH {}:'.format(epoch_number + 1))
+    total = 0
+    correct = 0
+    # print('EPOCH {}:'.format(epoch_number + 1))
 
     # Make sure gradient tracking is on, and do a pass over the data
     # model.train(True)
-    avg_loss = train_one_epoch(epoch_number, writer)
+    avg_loss, tacc = train_one_epoch(epoch_number, writer)
 
     # We don't need gradients on to do reporting
     model.train(False)
@@ -157,19 +189,35 @@ for epoch in range(EPOCHS):
         
         # validating the model
         voutputs = model(vinputs)
+
+        # calculating accuracy
+        _, vpredicted = torch.max(voutputs.data,1)
+
+        total += vlabels.size(0)
+        correct += (vpredicted == vlabels).sum()
+        
+
         vloss = loss_fn(voutputs, vlabels)
         running_vloss += vloss.detach().item() # wihtout .detach I get an out of memory error on GPU
-
-
-    avg_vloss = running_vloss / (i + 1)
-    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+    
+    # log average accuracy
+    vacc = (correct/total) * 100
+    writer.add_scalars("Average Accuracy", 
+                      {"Training" : tacc, "Validation" : vacc},
+                      epoch_number + 1)
+    
 
     # Log the running loss averaged per batch
     # for both training and validation
+    avg_vloss = running_vloss / (i + 1)
+
     writer.add_scalars('Training vs. Validation Loss',
                     { 'Training' : avg_loss, 'Validation' : avg_vloss },
                     epoch_number + 1)
     writer.flush()
+
+    # print('LOSS train {} valid {}'.format(round(avg_loss,2), round(avg_vloss,2)))
+    # print("Accuracy_training: {} Accuracy_validation {}".format(round(tacc.item(),2), round(vacc.item(),2)))
 
     # Track best performance, and save the model's state
     if avg_vloss < best_vloss:
@@ -179,4 +227,3 @@ for epoch in range(EPOCHS):
 
     epoch_number += 1
 
-    print(os.listdir(input_dir))
