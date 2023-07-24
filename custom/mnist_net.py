@@ -25,4 +25,5 @@ class FreeConvNetwork(nn.Module):
 
     def forward(self, x):
         output = self.Seq_stack(x)
+        # print(" Inside: Inputsize=", x.size(), "Outputsize=", output.size()) # check paralellism
         return output

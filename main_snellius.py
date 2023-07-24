@@ -12,11 +12,17 @@ import matplotlib.pyplot as plt
 
 #dealing with input
 parser = argparse.ArgumentParser(description="DNN_project")
-parser.add_argument("--inp_dir", "--input_string", required=True)
+parser.add_argument("--inp_dir", help="Directory of /Data is located", required=True)
+parser.add_argument("--nepoch", type=int, required=True)
+parser.add_argument("--dataset",choices=["mnist","celeba","places365","combi"],
+                    help="Choices: mnist, celeba, places365, combi", type=str,required=True)
 
 args = vars(parser.parse_args())
 input_dir = args["inp_dir"]
 data_dir = input_dir + "/Data"
+
+EPOCHS = args["nepoch"]
+dataset_choice = args["dataset"]
 
 #######
 # Model
@@ -24,18 +30,28 @@ data_dir = input_dir + "/Data"
 
 # from custom.mnist_net import FreeConvNetwork
 # from custom.model3x_HighDimOutCh import FreeConvNetwork
-from custom.mnist_net import FreeConvNetwork
+if dataset_choice == "mnist":
+    from custom.mnist_net import FreeConvNetwork
+    sum_dim = (3,28,28)
+elif dataset_choice == "celeba":
+    from custom.model3x_HighDimOutCh import FreeConvNetwork
+    sum_dim = (3,218,178)
+elif dataset_choice == "places365":
+    ...
+elif dataset_choice == "combi":
+    ...
 
 # Testing & summarizeing the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device, torch.cuda.device_count())
+ndevices = torch.cuda.device_count()
+print(device, ndevices, os.cpu_count())
 
 
 model = FreeConvNetwork()
-model = nn.DataParallel(model)
-
+if ndevices > 1:
+    model = nn.DataParallel(model)
 model.to(device)
-summary(model, (3, 28, 28))
+summary(model, sum_dim)
 
 
 ######
@@ -43,36 +59,39 @@ summary(model, (3, 28, 28))
 ######
 
 # Mnist for setting up snellius
-transform = transforms.Compose([
-    transforms.ToTensor()
-])
-train_dataset = datasets.MNIST(data_dir, train = True, download=False, transform=transform)
-test_dataset = datasets.MNIST(data_dir, train=False, download=False, transform=transform)
+if dataset_choice == "mnist":
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+    train_dataset = datasets.MNIST(data_dir, train = True, download=False, transform=transform)
+    test_dataset = datasets.MNIST(data_dir, train=False, download=False, transform=transform)
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=72, shuffle=True)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=72)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=144, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=144)
 
-#report split sizes
-print("Training set size: {}".format(len(train_dataset)))
-print("Testing set size: {}".format(len(test_dataset)))
-
+    #report split sizes
+    print("Training set size: {}".format(len(train_dataset)))
+    print("Testing set size: {}".format(len(test_dataset)))
 
 #CelebA Pytorch data set
-# transform = transforms.Compose([
-#     transforms.ToTensor()
-# ])
-# train_dataset = datasets.CelebA("./data", "train",target_type="identity", download=False, transform=transform)
-# test_dataset = datasets.CelebA("./data", "test", target_type="identity", download=False, transform=transform)
-# val_dataset = datasets.CelebA("./data/", "valid", target_type="identity",download=False, transform=transform)
+elif dataset_choice == "celeba":
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+    train_dataset = datasets.CelebA("./data", "train",target_type="identity", download=False, transform=transform)
+    test_dataset = datasets.CelebA("./data", "test", target_type="identity", download=False, transform=transform)
+    val_dataset = datasets.CelebA("./data/", "valid", target_type="identity",download=False, transform=transform)
 
-# train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=5, shuffle=True)
-# test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=5)
-# val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = 5)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size= 144, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size= 144)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = 144)
 
-# #report split sizes
-# print("Training set size: {}".format(len(train_dataset)))
-# print("Testing set size: {}".format(len(test_dataset)))
-# print("Validation set size: {}".format(len(val_dataset)))
+    #report split sizes
+    print("Training set size: {}".format(len(train_dataset)))
+    print("Testing set size: {}".format(len(test_dataset)))
+    print("Validation set size: {}".format(len(val_dataset)))
+else:
+    raise ValueError("Other datasets still missing")
 
 
 ##########
@@ -108,6 +127,8 @@ def train_one_epoch(epoch_index, tb_writer):
         
         # Make predictions for this batch
         outputs = model(inputs)
+        # check data parallelism
+        # print("Outise: Input size=", inputs.size(),"Output size=", outputs.size())
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs, labels)
@@ -161,7 +182,7 @@ writer.add_image("train_data_firstFour; Labels: {}".format(
     labels.numpy()[0:4]), img_grid)
 
 
-EPOCHS = 10
+
 best_vloss = 1_000_000.
 
 
@@ -223,7 +244,10 @@ for epoch in range(EPOCHS):
     if avg_vloss < best_vloss:
         best_vloss = avg_vloss
         model_path = (input_dir + '/model/model_{}_{}'.format(timestamp, epoch_number))
-        torch.save(model.state_dict(), model_path)
+        torch.save(model.module.state_dict(), model_path)
 
     epoch_number += 1
 
+############
+# Validation
+############

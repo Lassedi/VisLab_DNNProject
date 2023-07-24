@@ -23,13 +23,17 @@ conda activate DNN_project
 echo "conda env activated"
 
 #coping the data
-cp -r $HOME/FCN_project/Data "$TMPDIR"
+mkdir -p "$TMPDIR"/Data
+
+cp -r $HOME/FCN_project/Data/MNIST "$TMPDIR"/Data
+cp -r $HOME/FCN_project/custom "$TMPDIR"
 cp $HOME/FCN_project/main_snellius.py "$TMPDIR"
+cd "$TMPDIR"
 
 echo "Starting Training"
 
 #running the script
-python FCN_project/main_snellius.py --inp_dir "$TMPDIR"
+python main_snellius.py --inp_dir "$TMPDIR" --nepoch 5
 echo "Finished training"
 
 #coping the results to local machine
