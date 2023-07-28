@@ -78,21 +78,49 @@ if dataset_choice == "mnist":
 
 #CelebA Pytorch data set
 elif dataset_choice == "celeba":
+    #CelebA Pytorch data set
     transform = transforms.Compose([
         transforms.ToTensor()
     ])
-    train_dataset = datasets.CelebA(data_dir, "train",target_type="identity", download=False, transform=transform)
-    test_dataset = datasets.CelebA(data_dir, "test", target_type="identity", download=False, transform=transform)
-    val_dataset = datasets.CelebA(data_dir, "valid", target_type="identity",download=False, transform=transform)
+    dataset = datasets.CelebA("./Data", "all",target_type="identity", download=True, transform=transform) # load the whole datset
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size= 32, num_workers =  18, pin_memory=True, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size= 200, num_workers =  18, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = 200, num_workers =  18, pin_memory=True)
 
-    #report split sizes
-    print("Training set size: {}".format(len(train_dataset)))
-    print("Testing set size: {}".format(len(test_dataset)))
-    print("Validation set size: {}".format(len(val_dataset)))
+    # split identity indicies for face recognition 80% of each class training 10% each for validation and testing
+    tind_list, vind_list, ttind_list = [], [], []
+    for ind in range(len(torch.unique(dataset.identity))):
+        inds, _ = torch.where(dataset.identity == ind + 1) # get all indices where identity matches the specific label
+        train_size = int(len(inds) * 0.8)
+        val_size = int((len(inds) -  train_size)/2)
+        test_size = int((len(inds) - train_size)/2)
+        if sum((train_size, val_size, test_size)) != len(inds):
+            train_size += len(inds) - sum((train_size, val_size, test_size))
+
+        # check if the individual classes are split nicely
+        # print(train_size, val_size, test_size, sum([train_size, val_size, test_size]))
+        # print(len(inds))
+
+        tind, vind, ttind = torch.split(inds, [train_size, val_size, test_size]) # split class indices based on train/val/test split
+        tind_list.append(tind)
+        vind_list.append(vind)
+        ttind_list.append(ttind)
+        
+    # conv lists to tensors
+    tind_list = torch.cat(tind_list)
+    vind_list = torch.cat(vind_list)
+    ttind_list = torch.cat(ttind_list)
+
+    # create train/val/test sets
+    train_dataset = torch.utils.data.Subset(dataset, tind_list)
+    val_dataset = torch.utils.data.Subset(dataset, vind_list[torch.randperm(len(vind_list))])
+    test_dataset = torch.utils.data.Subset(dataset, ttind_list[torch.randperm(len(ttind_list))])
+
+    #verify that all classes in val data are present in train data
+    # print(torch.where(torch.isin(torch.unique(dataset.identity[vind_list]), dataset.identity[tind_list]))[0].shape[0] == 
+    #       len(torch.unique(dataset.identity[vind_list])))
+    # create loaders
+    train_loader = torch.utils.data.DataLoader(train_dataset,batch_size = 32, shuffle=True, num_workers = 18, pin_memory=True) 
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, num_workers=18, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, num_workers=18, pin_memory=True)
 else:
     raise ValueError("Other datasets still missing")
 
