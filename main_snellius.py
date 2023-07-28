@@ -33,9 +33,11 @@ dataset_choice = args["dataset"]
 if dataset_choice == "mnist":
     from custom.mnist_net import FreeConvNetwork
     sum_dim = (3,28,28)
+    model = FreeConvNetwork()
 elif dataset_choice == "celeba":
-    from custom.model3x_HighDimOutCh import FreeConvNetwork
+    from custom.celeba_net import FreeConvNetwork
     sum_dim = (3,218,178)
+    model = FreeConvNetwork()
 elif dataset_choice == "places365":
     ...
 elif dataset_choice == "combi":
@@ -44,10 +46,11 @@ elif dataset_choice == "combi":
 # Testing & summarizeing the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ndevices = torch.cuda.device_count()
-print(device, ndevices, os.cpu_count())
+ncpu = os.cpu_count()
+print(device, ndevices, ncpu)
 
 
-model = FreeConvNetwork()
+
 if ndevices > 1:
     model = nn.DataParallel(model)
 model.to(device)
@@ -66,8 +69,8 @@ if dataset_choice == "mnist":
     train_dataset = datasets.MNIST(data_dir, train = True, download=False, transform=transform)
     test_dataset = datasets.MNIST(data_dir, train=False, download=False, transform=transform)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=144, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=144)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=72, num_workers =  18, pin_memory=True, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=72, num_workers =  18, pin_memory=True)
 
     #report split sizes
     print("Training set size: {}".format(len(train_dataset)))
@@ -78,13 +81,13 @@ elif dataset_choice == "celeba":
     transform = transforms.Compose([
         transforms.ToTensor()
     ])
-    train_dataset = datasets.CelebA("./data", "train",target_type="identity", download=False, transform=transform)
-    test_dataset = datasets.CelebA("./data", "test", target_type="identity", download=False, transform=transform)
-    val_dataset = datasets.CelebA("./data/", "valid", target_type="identity",download=False, transform=transform)
+    train_dataset = datasets.CelebA(data_dir, "train",target_type="identity", download=False, transform=transform)
+    test_dataset = datasets.CelebA(data_dir, "test", target_type="identity", download=False, transform=transform)
+    val_dataset = datasets.CelebA(data_dir, "valid", target_type="identity",download=False, transform=transform)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size= 144, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size= 144)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = 144)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size= 32, num_workers =  18, pin_memory=True, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size= 200, num_workers =  18, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = 200, num_workers =  18, pin_memory=True)
 
     #report split sizes
     print("Training set size: {}".format(len(train_dataset)))
@@ -99,7 +102,7 @@ else:
 ##########
 
 #defining the loss function and optimizer
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)#), weight_decay=0.1) #weight decay = regularization to keep weights small
+optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)#), weight_decay=0.1) #weight decay = regularization to keep weights small
 loss_fn = nn.CrossEntropyLoss()
 # scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1, end_factor=0.01,total_iters=100)
 
@@ -116,7 +119,7 @@ def train_one_epoch(epoch_index, tb_writer):
     for i, data in enumerate(train_loader):
         # Every data instance is an input + label pair
         inputs, labels = data
-        
+
         # moving the training data batch by batch to the GPU
         inputs, labels = inputs.to(device), labels.to(device)
 
@@ -195,7 +198,7 @@ for epoch in range(EPOCHS):
     # print('EPOCH {}:'.format(epoch_number + 1))
 
     # Make sure gradient tracking is on, and do a pass over the data
-    # model.train(True)
+    model.train(True)
     avg_loss, tacc = train_one_epoch(epoch_number, writer)
 
     # We don't need gradients on to do reporting
@@ -244,10 +247,35 @@ for epoch in range(EPOCHS):
     if avg_vloss < best_vloss:
         best_vloss = avg_vloss
         model_path = (input_dir + '/model/model_{}_{}'.format(timestamp, epoch_number))
-        torch.save(model.module.state_dict(), model_path)
+        if ndevices > 1:
+            torch.save(model.module.state_dict(), model_path)
+        else:
+            torch.save(model.state_dict(), model_path)
 
     epoch_number += 1
 
 ############
-# Validation
+# Validation (unseen data)
 ############
+if not dataset_choice == "mnist":
+    vcorrect = 0
+    vtotal = 0
+
+    with torch.no_grad():
+        model.train(False)
+        for i, data in enumerate(val_loader):
+            vdata, vlabels = data
+            vdata, vlabels = vdata.to(device), vlabels.to(device)
+
+            voutput = model(vdata)
+
+            vloss = loss_fn(voutput, vlabels)
+
+            # validation accuracy unseen data
+            _, vpred = torch.max(voutput.data,1)
+            vcorrect =+ (vpred == vlabels).sum()
+            vtotal =+ vlabels.size(0)
+
+        vacc = vcorrect / vtotal * 100
+
+        print("Validation Accuracy on unseen data is {}%".format(vacc))

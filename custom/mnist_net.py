@@ -17,7 +17,7 @@ class FreeConvNetwork(nn.Module):
 
         nn.Linear(64*4*4, 512), # input size = output_channels*output_size/2 of last Local layer because of maxpool2d kernel size 2
         nn.ReLU(),
-        nn.Linear(512, 10),
+        nn.Linear(512, 11),
         )
         
 
