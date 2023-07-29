@@ -35,7 +35,7 @@ if dataset_choice == "mnist":
     sum_dim = (3,28,28)
     model = FreeConvNetwork()
 elif dataset_choice == "celeba":
-    from custom.celeba_net import FreeConvNetwork
+    from custom.celeba_AlexNet import FreeConvNetwork
     sum_dim = (3,218,178)
     model = FreeConvNetwork()
 elif dataset_choice == "places365":
