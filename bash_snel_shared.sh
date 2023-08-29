@@ -24,12 +24,12 @@ echo "conda env activated"
 
 #coping the data
 #mktmp -d -p "/scratch-shared/ldietz
-mkdir -d -p "/scratch-shared/tmp.oXiVq5zGCK"/Data
+#mkdir -d -p "/scratch-shared/tmp.oXiVq5zGCK"/Data
 
-cp -r $HOME/FCN_project/Data/MNIST "/scratch-shared/tmp.oXiVq5zGCK"/Data
-cp -r $HOME/FCN_project/custom "/scratch-shared/tmp.oXiVq5zGCK"
-cp $HOME/FCN_project/main_snellius.py "/scratch-shared/tmp.oXiVq5zGCK"
-cd "/scratch-shared/tmp.oXiVq5zGCK"
+#cp -r $HOME/FCN_project/Data/MNIST "/scratch-shared/tmp.oXiVq5zGCK"/Data
+cp -r $HOME/FCN_project/custom $TMPDIR
+cp $HOME/FCN_project/main_snellius.py $TMPDIR
+cd $TMPDIR 
 
 echo "Starting Training"
 
